@@ -14,7 +14,7 @@ setwd("your_path")
 
 FILE_ICAMP <- "icamp.txt"
 FILE_REP   <- "rep.txt"
-FILE_OTU   <- "otu_table.txt"
+FILE_OTU   <- "asv_table.txt"
 FILE_ENV   <- "env.txt"
 OUTPUT_DIR <- "SEM_output"
 
