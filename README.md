@@ -23,8 +23,8 @@ Main analyses include:
 
 Main input files:
 
-* `envandalpha1.txt`
-* `ASV_table.txt`
+* `env_alpha.txt`
+* `asv_table.txt`
 
 ### `Partial_CAP.R`
 
