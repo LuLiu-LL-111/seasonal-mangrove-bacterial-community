@@ -5,7 +5,7 @@ library(tidyverse)
 library(ggplot2)
 
 otu <- read.delim(
-  "otu_table.txt",
+  "asv_table.txt",
   row.names = 1,
   sep = "\t",
   stringsAsFactors = FALSE,
