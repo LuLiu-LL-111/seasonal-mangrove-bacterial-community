@@ -28,6 +28,14 @@ meta <- read.delim(
   stringsAsFactors = FALSE,
   check.names = FALSE
 )
+asv_raw <- read.delim(
+  "asv_table.txt",
+  header = TRUE,
+  sep = "\t",
+  row.names = 1,
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
 
 
 required_cols <- c(
@@ -450,19 +458,10 @@ write.csv(
   "06_alpha_pH_after_controlling_season.csv",
   row.names = FALSE
 )
-otu_raw <- read.delim(
-  "oturare.txt",
-  header = TRUE,
-  sep = "\t",
-  row.names = 1,
-  stringsAsFactors = FALSE,
-  check.names = FALSE
-)
-
 
 ## Identify numeric columns
 numeric_column <- vapply(
-  otu_raw,
+  asv_raw,
   function(x) {
 
     x_numeric <- suppressWarnings(
@@ -477,29 +476,29 @@ numeric_column <- vapply(
   logical(1)
 )
 
-otu_numeric <- otu_raw[
+asv_numeric <- asv_raw[
   ,
   numeric_column,
   drop = FALSE
 ]
 
-otu_numeric <- as.matrix(
-  otu_numeric
+asv_numeric <- as.matrix(
+  asv_numeric
 )
 
-storage.mode(otu_numeric) <- "numeric"
+storage.mode(asv_numeric) <- "numeric"
 
 
 ## Number of sample names matching ASV-table column names
 column_match <- sum(
   meta$samples %in%
-    colnames(otu_numeric)
+    colnames(asv_numeric)
 )
 
 ## Number of sample names matching ASV-table row names
 row_match <- sum(
   meta$samples %in%
-    rownames(otu_numeric)
+    rownames(asv_numeric)
 )
 
 cat(
@@ -520,11 +519,11 @@ if (column_match > row_match) {
   ## ASVs are in rows and samples are in columns
   common_samples <- intersect(
     meta$samples,
-    colnames(otu_numeric)
+    colnames(asv_numeric)
   )
 
   comm <- t(
-    otu_numeric[
+    asv_numeric[
       ,
       common_samples,
       drop = FALSE
@@ -536,10 +535,10 @@ if (column_match > row_match) {
   ## Samples are in rows and ASVs are in columns
   common_samples <- intersect(
     meta$samples,
-    rownames(otu_numeric)
+    rownames(asv_numeric)
   )
 
-  comm <- otu_numeric[
+  comm <- asv_numeric[
     common_samples,
     ,
     drop = FALSE
@@ -548,7 +547,7 @@ if (column_match > row_match) {
 } else {
 
   stop(
-    "Unable to determine automatically whether samples in oturare.txt are stored in rows or columns."
+    "Unable to determine automatically whether samples in asv_table.txt are stored in rows or columns."
   )
 }
 
