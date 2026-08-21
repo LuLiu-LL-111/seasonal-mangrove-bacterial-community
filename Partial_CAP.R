@@ -4,7 +4,7 @@ library(ape)
 library(tidyverse)
 library(ggplot2)
 
-otu <- read.delim(
+asv <- read.delim(
   "asv_table.txt",
   row.names = 1,
   sep = "\t",
@@ -20,10 +20,10 @@ map <- read.delim(
   check.names = FALSE
 )
 
-otu <- t(otu)
+asv <- t(asv)
 
-otu_hell <- decostand(otu, method = "hellinger")
-dis_bray <- vegdist(otu_hell, method = "bray")
+asv_hell <- decostand(asv, method = "hellinger")
+dis_bray <- vegdist(asv_hell, method = "bray")
 p <- pcoa(dis_bray, correction = "lingoes")
 
 site <- as.data.frame(p$vectors[, 1:2])
@@ -32,48 +32,48 @@ colnames(site) <- c("X1", "X2")
 exp1 <- round(100 * p$values$Relative_eig[1], 2)
 exp2 <- round(100 * p$values$Relative_eig[2], 2)
 
-otu_cnt <- otu
-otu_cnt <- otu_cnt[rownames(otu_hell), , drop = FALSE]
+asv_cnt <- asv
+asv_cnt <- asv_cnt[rownames(asv_hell), , drop = FALSE]
 
-keep_rows <- rowSums(otu_cnt, na.rm = TRUE) > 0
-keep_cols <- colSums(otu_cnt, na.rm = TRUE) > 0
-otu_cnt <- otu_cnt[keep_rows, keep_cols, drop = FALSE]
-otu_hell <- otu_hell[keep_rows, keep_cols, drop = FALSE]
+keep_rows <- rowSums(asv_cnt, na.rm = TRUE) > 0
+keep_cols <- colSums(asv_cnt, na.rm = TRUE) > 0
+asv_cnt <- asv_cnt[keep_rows, keep_cols, drop = FALSE]
+asv_hell <- asv_hell[keep_rows, keep_cols, drop = FALSE]
 
 W <- as.data.frame(p$vectors[, 1:4])
-W <- W[rownames(otu_hell), , drop = FALSE]
+W <- W[rownames(asv_hell), , drop = FALSE]
 
 badW <- apply(W, 1, function(z) any(is.na(z)))
 if (any(badW)) {
   message("Some samples contain NA values in the PCoA coordinates; these samples were removed before species projection.")
   W <- W[!badW, , drop = FALSE]
-  otu_hell <- otu_hell[rownames(W), , drop = FALSE]
-  otu_cnt <- otu_cnt[rownames(W), , drop = FALSE]
+  asv_hell <- asv_hell[rownames(W), , drop = FALSE]
+  asv_cnt <- asv_cnt[rownames(W), , drop = FALSE]
 }
 
-zero_cols <- colSums(otu_hell, na.rm = TRUE) == 0
+zero_cols <- colSums(asv_hell, na.rm = TRUE) == 0
 if (any(zero_cols)) {
   message(sprintf(
-    "%d OTUs have zero abundance across the current sample set and were removed.",
+    "%d asvs have zero abundance across the current sample set and were removed.",
     sum(zero_cols)
   ))
-  otu_hell <- otu_hell[, !zero_cols, drop = FALSE]
+  asv_hell <- asv_hell[, !zero_cols, drop = FALSE]
 }
 
 species <- NULL
 try({
-  species <- vegan::wascores(otu_hell, W)
+  species <- vegan::wascores(asv_hell, W)
 }, silent = TRUE)
 
 if (is.null(species)) {
-  X <- as.matrix(otu_hell)
+  X <- as.matrix(asv_hell)
   S <- as.matrix(W)
   wsum <- colSums(X, na.rm = TRUE)
 
   keep_sp <- wsum > 0
   if (any(!keep_sp)) {
     message(sprintf(
-      "%d OTUs have zero effective abundance in the current dataset and were skipped.",
+      "%d asvs have zero effective abundance in the current dataset and were skipped.",
       sum(!keep_sp)
     ))
     X <- X[, keep_sp, drop = FALSE]
@@ -126,8 +126,8 @@ names(map) <- names(map) |>
   tolower() |>
   gsub("[^a-z0-9_]+", "_", x = _)
 
-if ("otus" %in% names(map)) {
-  names(map)[names(map) == "otus"] <- "sample"
+if ("asvs" %in% names(map)) {
+  names(map)[names(map) == "asvs"] <- "sample"
 }
 
 map <- map |>
@@ -181,7 +181,7 @@ gg +
 library(vegan)
 
 cap_season_partial <- capscale(
-  otu_hell ~ season + Condition(site + group),
+  asv_hell ~ season + Condition(site + group),
   data = map,
   distance = "bray"
 )
