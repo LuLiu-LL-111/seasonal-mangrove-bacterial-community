@@ -10,7 +10,7 @@ setwd("your_path")
 grp <- fread("datanet1.txt", header = TRUE)
 tr <- read.tree("root.tree")
 
-required_cols <- c("OTU", "Group")
+required_cols <- c("ASV", "Group")
 missing_cols <- setdiff(required_cols, names(grp))
 
 if (length(missing_cols) > 0) {
@@ -30,14 +30,14 @@ clean_name <- function(x) {
   x
 }
 
-grp[, OTU := clean_name(OTU)]
+grp[, ASV := clean_name(ASV)]
 tr$tip.label <- clean_name(tr$tip.label)
 
-if (anyDuplicated(grp$OTU) > 0) {
-  dup <- unique(grp$OTU[duplicated(grp$OTU)])
+if (anyDuplicated(grp$ASV) > 0) {
+  dup <- unique(grp$ASV[duplicated(grp$ASV)])
   stop(
     paste0(
-      "Duplicated OTU names were found in datanet1.txt: ",
+      "Duplicated ASV names were found in datanet1.txt: ",
       paste(head(dup, 20), collapse = ", ")
     )
   )
@@ -64,18 +64,18 @@ if (!all(grp$Group %in% c(0, 1))) {
 }
 
 # ============================================================
-# 2. Match OTUs between the group table and phylogenetic tree
+# 2. Match ASVs between the group table and phylogenetic tree
 # ============================================================
 
-common <- intersect(grp$OTU, tr$tip.label)
+common <- intersect(grp$ASV, tr$tip.label)
 
 if (length(common) == 0) {
-  stop("No matching OTUs were found between datanet1.txt and root.tree.")
+  stop("No matching ASVs were found between datanet1.txt and root.tree.")
 }
 
-cat("Number of OTUs in datanet1.txt =", nrow(grp), "\n")
+cat("Number of ASVs in datanet1.txt =", nrow(grp), "\n")
 cat("Number of tips in root.tree =", length(tr$tip.label), "\n")
-cat("Number of matched OTUs =", length(common), "\n")
+cat("Number of matched ASVs =", length(common), "\n")
 
 tr2 <- drop.tip(
   tr,
@@ -84,13 +84,13 @@ tr2 <- drop.tip(
 
 tips <- tr2$tip.label
 
-grp2 <- grp[match(tips, grp$OTU)]
+grp2 <- grp[match(tips, grp$ASV)]
 
-if (any(is.na(grp2$OTU))) {
+if (any(is.na(grp2$ASV))) {
   stop("Some tree tips could not be matched to datanet1.txt.")
 }
 
-stopifnot(all(grp2$OTU == tips))
+stopifnot(all(grp2$ASV == tips))
 
 # Calculate pairwise phylogenetic distances
 D <- cophenetic(tr2)
@@ -100,24 +100,24 @@ D <- D[tips, tips, drop = FALSE]
 # 3. Define Group 1 and Group 0
 # ============================================================
 
-otu_g1 <- grp2$OTU[grp2$Group == 1]
-otu_g0 <- grp2$OTU[grp2$Group == 0]
+ASV_g1 <- grp2$ASV[grp2$Group == 1]
+ASV_g0 <- grp2$ASV[grp2$Group == 0]
 
-cat("Number of OTUs in Group 1 =", length(otu_g1), "\n")
-cat("Number of OTUs in Group 0 =", length(otu_g0), "\n")
+cat("Number of ASVs in Group 1 =", length(ASV_g1), "\n")
+cat("Number of ASVs in Group 0 =", length(ASV_g0), "\n")
 
-if (length(otu_g1) < 2) {
-  stop("Group 1 must contain at least two OTUs to calculate MPD.")
+if (length(ASV_g1) < 2) {
+  stop("Group 1 must contain at least two ASVs to calculate MPD.")
 }
 
-if (length(otu_g0) < length(otu_g1)) {
+if (length(ASV_g0) < length(ASV_g1)) {
   stop(
     paste0(
       "Group 0 contains only ",
-      length(otu_g0),
-      " OTUs, but ",
-      length(otu_g1),
-      " OTUs are required for each random sample."
+      length(ASV_g0),
+      " ASVs, but ",
+      length(ASV_g1),
+      " ASVs are required for each random sample."
     )
   )
 }
@@ -126,15 +126,15 @@ if (length(otu_g0) < length(otu_g1)) {
 # 4. Define the MPD function
 # ============================================================
 
-calc_mpd <- function(otu_vec, D) {
+calc_mpd <- function(ASV_vec, D) {
 
-  if (length(otu_vec) < 2) {
+  if (length(ASV_vec) < 2) {
     return(NA_real_)
   }
 
   subD <- D[
-    otu_vec,
-    otu_vec,
+    ASV_vec,
+    ASV_vec,
     drop = FALSE
   ]
 
@@ -146,7 +146,7 @@ calc_mpd <- function(otu_vec, D) {
 
 # Observed MPD of Group 1
 obs_mpd <- calc_mpd(
-  otu_g1,
+  ASV_g1,
   D
 )
 
@@ -161,19 +161,19 @@ if (!is.finite(obs_mpd)) {
 set.seed(123)
 
 nperm <- 9999
-k <- length(otu_g1)
+k <- length(ASV_g1)
 
 rand_mpd <- replicate(
   nperm,
   {
-    sampled_otus <- sample(
-      otu_g0,
+    sampled_ASVs <- sample(
+      ASV_g0,
       size = k,
       replace = FALSE
     )
 
     calc_mpd(
-      sampled_otus,
+      sampled_ASVs,
       D
     )
   }
@@ -259,8 +259,8 @@ mpd_summary <- data.frame(
   P_upper = p_upper,
   P_two_sided = p_two,
   N_permutations = length(rand_mpd),
-  Group1_size = length(otu_g1),
-  Group0_size = length(otu_g0)
+  Group1_size = length(ASV_g1),
+  Group0_size = length(ASV_g0)
 )
 
 write.table(
