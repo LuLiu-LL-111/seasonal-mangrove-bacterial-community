@@ -14,13 +14,13 @@ setwd("your_path")
 
 FILE_ICAMP <- "icamp.txt"
 FILE_REP   <- "rep.txt"
-FILE_OTU   <- "asv_table.txt"
+FILE_ASV   <- "asv_table.txt"
 FILE_ENV   <- "env.txt"
 OUTPUT_DIR <- "SEM_output"
 
 if (!dir.exists(OUTPUT_DIR)) dir.create(OUTPUT_DIR, recursive = TRUE)
 
-required_files <- c(FILE_ICAMP, FILE_REP, FILE_OTU, FILE_ENV)
+required_files <- c(FILE_ICAMP, FILE_REP, FILE_ASV, FILE_ENV)
 if (!all(file.exists(required_files))) {
   stop(
     paste0(
@@ -218,49 +218,49 @@ cat("Number of samples in the environmental table: ", nrow(env), "\n")
 cat("Sites: ", paste(sort(unique(env$site)), collapse = ", "), "\n")
 cat("Seasons: ", paste(sort(unique(env$season)), collapse = ", "), "\n")
 
-## 7. Calculate observed richness from the OTU table
-otu_raw <- read.delim(
-  FILE_OTU,
+## 7. Calculate observed richness from the ASV table
+ASV_raw <- read.delim(
+  FILE_ASV,
   sep = "\t",
   header = TRUE,
   check.names = FALSE,
   stringsAsFactors = FALSE
 )
 
-if (ncol(otu_raw) < 2) stop("Invalid OTU table format: at least two columns are required.")
+if (ncol(ASV_raw) < 2) stop("Invalid ASV table format: at least two columns are required.")
 
-otu_sample_names <- colnames(otu_raw)[-1]
+ASV_sample_names <- colnames(ASV_raw)[-1]
 
 ## Avoid using [[ ]] to prevent the previous bracket-related error
-otu_numeric_list <- Map(
+ASV_numeric_list <- Map(
   function(x, sample_name) {
-    as_num_checked(x, paste0("OTU sample column: ", sample_name))
+    as_num_checked(x, paste0("ASV sample column: ", sample_name))
   },
-  otu_raw[, -1, drop = FALSE],
-  otu_sample_names
+  ASV_raw[, -1, drop = FALSE],
+  ASV_sample_names
 )
 
-otu_matrix <- do.call(cbind, otu_numeric_list)
-colnames(otu_matrix) <- clean_sample_id(otu_sample_names)
+ASV_matrix <- do.call(cbind, ASV_numeric_list)
+colnames(ASV_matrix) <- clean_sample_id(ASV_sample_names)
 
-if (anyDuplicated(colnames(otu_matrix)) > 0) {
-  dup <- unique(colnames(otu_matrix)[duplicated(colnames(otu_matrix))])
+if (anyDuplicated(colnames(ASV_matrix)) > 0) {
+  dup <- unique(colnames(ASV_matrix)[duplicated(colnames(ASV_matrix))])
   stop(
-    paste0("Duplicate OTU sample names after cleaning: ", paste(dup, collapse = ", "))
+    paste0("Duplicate ASV sample names after cleaning: ", paste(dup, collapse = ", "))
   )
 }
 
-otu_richness <- data.frame(
-  Sample = colnames(otu_matrix),
-  Richness = colSums(otu_matrix > 0, na.rm = TRUE),
+ASV_richness <- data.frame(
+  Sample = colnames(ASV_matrix),
+  Richness = colSums(ASV_matrix > 0, na.rm = TRUE),
   stringsAsFactors = FALSE
 )
 
-cat("Number of samples in the OTU table: ", nrow(otu_richness), "\n")
+cat("Number of samples in the ASV table: ", nrow(ASV_richness), "\n")
 
 ## 8. Filter valid samples
-valid_samples <- intersect(env$Sample, otu_richness$Sample)
-if (length(valid_samples) == 0) stop("No shared samples were found between env.txt and otur.txt.")
+valid_samples <- intersect(env$Sample, ASV_richness$Sample)
+if (length(valid_samples) == 0) stop("No shared samples were found between env.txt and ASVr.txt.")
 
 pair_data_valid <- pair_data %>%
   filter(Sample1 %in% valid_samples, Sample2 %in% valid_samples)
@@ -277,7 +277,7 @@ write.csv(
       valid_samples
     )
   ),
-  file.path(OUTPUT_DIR, "pairwise_samples_missing_env_or_otu.csv"),
+  file.path(OUTPUT_DIR, "pairwise_samples_missing_env_or_ASV.csv"),
   row.names = FALSE
 )
 
@@ -344,7 +344,7 @@ aggregate_pair_metrics <- function(pair_df, method = c("mean", "median")) {
 build_sem_data <- function(pair_summary) {
   dat <- env %>%
     select(Sample, pH, Salinity, season, site) %>%
-    inner_join(otu_richness, by = "Sample") %>%
+    inner_join(ASV_richness, by = "Sample") %>%
     inner_join(pair_summary, by = "Sample") %>%
     drop_na(
       pH,
@@ -763,7 +763,7 @@ write.csv(
 data_summary <- data.frame(
   Item = c(
     "Environmental samples",
-    "OTU table samples",
+    "ASV table samples",
     "Valid samples",
     "Matched pairwise comparisons",
     "Main SEM samples",
@@ -776,7 +776,7 @@ data_summary <- data.frame(
   ),
   Value = c(
     nrow(env),
-    nrow(otu_richness),
+    nrow(ASV_richness),
     length(valid_samples),
     nrow(pair_with_meta),
     nrow(main_analysis$sem_data),
